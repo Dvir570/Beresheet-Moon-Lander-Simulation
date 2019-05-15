@@ -1,14 +1,14 @@
 
 public class SubEngine {
 	private final int ENGINE_THRUST = 25; // N
+	private final double FUEL_BURNING_RATE = 0.009; // kg fuel per second
 	private double tiltAngle; //In the surface of the center of gravity of the spacecraft
-	private double angularAcceleration; // angle per second^2
+	private double angularAcceleration = 1; // angle per second^2
 	private double angularVelocity = 0; // angle per second
-	private boolean on = false;
+	private boolean isOn = false;
 
-	public SubEngine(double tiltAngle, double angularAcceleration) {
+	public SubEngine(double tiltAngle) {
 		this.tiltAngle = tiltAngle;
-		this.angularAcceleration = angularAcceleration;
 	}
 	
 	public double getTiltAngle() {
@@ -36,15 +36,18 @@ public class SubEngine {
 	}
 	
 	public boolean isOn() {
-		return on;
+		return isOn;
 	}
 
 	public void setOn(boolean on) {
-		this.on = on;
+		this.isOn = on;
 	}
 
 	public int getEngineThrust() {
 		return ENGINE_THRUST;
 	}
 	
+	public double getFuelBurningRate() {
+		return FUEL_BURNING_RATE;
+	}
 }

@@ -1,17 +1,14 @@
 
 public class Spacecraft {	
-	private final int NET_WEIGHT = 165;
-	private final int ANGULAR_ACCELERATION = 1; // angle per second^2
-	private final int MAIN_ENGINE_THRUST = 430; // N
-	private final double FUEL_BURNING_RATE = 0.2; // kg fuel per second
+	private final int NET_WEIGHT = 165; // kg
 	//Relative to the surface of the moon,
 	//always at least 90 degrees. 
 	private final double INITIAL_AXIS_Z_ANGLE = 180;
-	private final double INITIAL_ALTITUDE = 30_000;
+	private final double INITIAL_ALTITUDE = 30_000; // meters
 	
-	private double fuelWeight = 216.06;
-	private double horizontalVelocity = 1_700;
-	private double verticalVelocity = 43;
+	private double fuelWeight = 216.06; // kg
+	private double horizontalVelocity = 1_700; // m/s
+	private double verticalVelocity = 43; // m/s
 	private double driveAngle = 270;
 	private double tiltAngle = 0;
 	//Relative to the surface of the moon,
@@ -23,11 +20,13 @@ public class Spacecraft {
 	private double accY = 0;
 	private double accZ = 1.6;
 	private SubEngine[] subEngines;
+	private MainEngine mainEngine;
 	
 	public Spacecraft() {
+		this.mainEngine = new MainEngine();
 		this.subEngines = new SubEngine[8];
 		for(int i = 0; i < 8; i++) {
-			this.subEngines[i] = new SubEngine(45*i, ANGULAR_ACCELERATION);
+			this.subEngines[i] = new SubEngine(45*i);
 		}
 	}
 	
@@ -40,7 +39,7 @@ public class Spacecraft {
 	 * depends on the total thrust engines and the total weight.
 	 */
 	private void updateAccZ() {
-		int totalThrust = MAIN_ENGINE_THRUST;
+		int totalThrust = mainEngine.getEngineThrust();
 		for(int i = 0; i < 8; i++)
 			if(subEngines[i].isOn())
 				totalThrust += subEngines[i].getEngineThrust();
@@ -92,7 +91,10 @@ public class Spacecraft {
 	 * @param t time passed from the last fuel update in seconds
 	 */
 	private void updateFuelWeight(int t) {
-		this.fuelWeight = this.fuelWeight - FUEL_BURNING_RATE*t;
+		fuelWeight -= mainEngine.getFuelBurningRate()*t;
+		for(int i = 0; i < 8; i++)
+			if(subEngines[i].isOn())
+				fuelWeight -= subEngines[i].getFuelBurningRate()*t;
 	}
 
 	public double getFuelWeight() {
