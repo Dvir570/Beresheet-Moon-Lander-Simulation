@@ -37,7 +37,7 @@ public class Spacecraft {
 	
 	/**
 	 * Update the up to date acceleration on the Z axis,
-	 * depends on the total thrust engines.
+	 * depends on the total thrust engines and the total weight.
 	 */
 	private void updateAccZ() {
 		int totalThrust = MAIN_ENGINE_THRUST;
