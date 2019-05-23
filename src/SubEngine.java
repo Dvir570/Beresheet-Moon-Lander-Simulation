@@ -25,14 +25,14 @@ public class SubEngine {
 
 	/**
 	 * Update the angular velocity of *this specific sub-engine only*, dependent on the contrary sub-engine.
-	 * @param t delta time, since the last update.
+	 * @param dt delta time, since the last update.
 	 * @param contraryEngine the sub-engine that might exert an opposing force.
 	 */
-	public void setAngularVelocity(int t, SubEngine contraryEngine) {
+	public void setAngularVelocity(double dt, SubEngine contraryEngine) {
 		if(this.isOn() && !contraryEngine.isOn())
-			this.angularVelocity += this.angularAcceleration*t;			
+			this.angularVelocity += this.angularAcceleration*dt;			
 		else if(!this.isOn() && contraryEngine.isOn())
-			this.angularVelocity -= contraryEngine.angularAcceleration*t;
+			this.angularVelocity -= contraryEngine.angularAcceleration*dt;
 	}
 	
 	public boolean isOn() {
