@@ -4,24 +4,20 @@ import java.io.IOException;
 
 public class Spacecraft {	
 	private final int NET_WEIGHT = 165; // kg
-	//Relative to the surface of the moon,
-	//always at least 90 degrees. 
-	private final double INITIAL_AXIS_Z_ANGLE = 58.3 + 90; // 90 is vertical (as in landing)
+	//Relative to the surface of the moon, always at least 90 degrees. 
+	private final double INITIAL_AXIS_Z_ANGLE = 90 + 90; // 90 is vertical (as in landing)
 	private final double INITIAL_ALTITUDE = 30_000; // meters
+	private final double INITIAL_HORIZONTAL_VELOCITY = 1_700; // m/s
+	private final double INITIAL_VERTICAL_VELOCITY = -43; // m/s
+	private final double EPS = 5;
 	
 	private double fuelWeight = 216.06; // kg
-	private double horizontalVelocity = 1_700; // m/s
-	private double verticalVelocity = -43; // m/s
-	private double driveAngle = 270;
-	private double tiltAngle = 0;
-	//Relative to the surface of the moon,
-	//always at least 90 degrees. 
+	private double horizontalVelocity = INITIAL_HORIZONTAL_VELOCITY; // m/s
+	private double verticalVelocity = INITIAL_VERTICAL_VELOCITY; // m/s
+	//Relative to the surface of the moon, always at least 90 degrees. 
 	private double axisZAngle = INITIAL_AXIS_Z_ANGLE;
-	private boolean availableOrientedDirection = true;
 	private double altitude = INITIAL_ALTITUDE;
-	private double accX = 0;
-	private double accY = 0;
-	private double accZ = 0;
+	private double accZ = 0; // Z axis of the spacecraft
 	private SubEngine[] subEngines;
 	private MainEngine mainEngine;
 	
@@ -39,30 +35,35 @@ public class Spacecraft {
 	 */
 	public boolean land() {
 		double time = 0;
-		double dt = 1; //second
+		double dt = 1; //seconds
 		
 		try {
 			BufferedWriter writer = writer = new BufferedWriter(new FileWriter("log.csv"));
-		    writer.write("time, altitude, axis Z angle, vertical acc, vertical vel, horizontal acc, horizontal vel\n");
+		    writer.write("time, altitude, axis Z angle, vertical acc, vertical vel, horizontal acc, horizontal vel, fuel weight\n");
 
-			while(this.altitude > 990) {
-				updateAccZ();
+			while(this.altitude > 0) {
 				time += dt;
-				updateVerticalVelocity(dt);
-				updateHorizontalVelocity(dt);
-				updateAltitude(dt);
-				updateZOrientation(dt);
 				updateFuelWeight(dt);
+				engineControl(dt);
+				this.accZ = accZ();
+				updateHorizontalVelocity(dt);
+				updateVerticalVelocity(dt);
+				updateAltitude(dt);
+				
 				writer.write(time + ", " + this.altitude + ", " + this.axisZAngle
-						+ ", " + (this.accZ*Math.cos(this.axisZAngle-90)-Moon.getGravityAcc(horizontalVelocity))
-						+ ", " + this.verticalVelocity + ", " + (-accZ*Math.sin(this.axisZAngle-90)*dt)
-						+ ", " + this.horizontalVelocity + "\n");
+						+ ", " + (this.accZ*Math.cos(Math.toRadians(this.axisZAngle-90))-Moon.getGravityAcc(horizontalVelocity))
+						+ ", " + this.verticalVelocity + ", " + (-accZ*Math.sin(Math.toRadians(this.axisZAngle-90))*dt)
+						+ ", " + this.horizontalVelocity
+						+ ", " + this.fuelWeight + "\n");
 				System.out.println("Time: " + time
 						+ "\tAlt: " + this.altitude
 						+ "\tZangle: " + this.axisZAngle
-						+ "\tVerAcc: " + (this.accZ*Math.cos(this.axisZAngle-90)-Moon.getGravityAcc(horizontalVelocity))
+						+ "\tAccZ: " + this.accZ
+						+ "\tUpAcc: " + this.accZ*Math.cos(Math.toRadians(this.axisZAngle-90))
+						+ "\tGravityAcc: " + Moon.getGravityAcc(horizontalVelocity)
+						+ "\tVerAcc: " + (this.accZ*Math.cos(Math.toRadians(this.axisZAngle-90))-Moon.getGravityAcc(horizontalVelocity))
 						+ "\tVerVel: " + this.verticalVelocity
-						+ "\tHorAcc: " + (-accZ*Math.sin(this.axisZAngle-90)*dt)
+						+ "\tHorAcc: " + (-accZ*Math.sin(Math.toRadians(this.axisZAngle-90))*dt)
 						+ "\tHorVel: " + this.horizontalVelocity);
 			}
 			writer.close();
@@ -70,8 +71,8 @@ public class Spacecraft {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
-		return false;
+		System.out.println("Fuel weight: " + fuelWeight);
+		return altitude == 0 && verticalVelocity > -20 && horizontalVelocity < 20;
 	}
 	
 	/**
@@ -79,7 +80,7 @@ public class Spacecraft {
 	 * @param dt delta time in seconds from the last horizontal velocity update
 	 */
 	private void updateHorizontalVelocity(double dt) {
-		this.horizontalVelocity -= accZ*Math.sin(this.axisZAngle-90)*dt; 
+		this.horizontalVelocity -= accZ*Math.sin(Math.toRadians(this.axisZAngle-90))*dt; 
 	}
 	
 	/**
@@ -88,7 +89,7 @@ public class Spacecraft {
 	 * @param dt delta time in seconds from the last vertical velocity update
 	 */
 	private void updateVerticalVelocity(double dt) {
-		this.verticalVelocity += (accZ*Math.cos(this.axisZAngle-90) - Moon.getGravityAcc(horizontalVelocity))*dt; 
+		this.verticalVelocity += (accZ*Math.cos(Math.toRadians(this.axisZAngle-90)) - Moon.getGravityAcc(horizontalVelocity))*dt; 
 	}
 	
 	/**
@@ -96,59 +97,105 @@ public class Spacecraft {
 	 * @param dt delta time in seconds from the last altitude update
 	 */
 	private void updateAltitude(double dt) {
-		double verticalAcc = accZ*Math.cos(this.axisZAngle-90)-Moon.getGravityAcc(horizontalVelocity);
+		double verticalAcc = accZ*Math.cos(Math.toRadians(this.axisZAngle-90))-Moon.getGravityAcc(horizontalVelocity);
 		this.altitude += verticalVelocity*dt + 0.5*verticalAcc*dt*dt;
+		if(this.altitude < 0) this.altitude = 0;
 	}
 	
 	/**
 	 * Update the up to date acceleration on the Z axis,
 	 * depends on the total thrust engines and the total weight.
+	 * @return acceleration in the Z axis of the spacecraft
 	 */
-	private void updateAccZ() {
-		int totalThrust = mainEngine.getEngineThrust();
+	private double accZ() {
+		int totalThrust = 0;
+		if(mainEngine.isOn())
+			totalThrust += mainEngine.getEngineThrust();
 		for(int i = 0; i < 8; i++)
 			if(subEngines[i].isOn())
 				totalThrust += subEngines[i].getEngineThrust();
-		this.accZ = totalThrust/(NET_WEIGHT+fuelWeight);
+		return (double)totalThrust/(NET_WEIGHT+fuelWeight);
 	}
 	
 	/**
-	 * Update the angle of the spacecraft relative to the surface of the moon.
-	 * The angle of Z axis determine the orientation of the spacecraft.
-	 * @param dt time passed from the last Z orientation update in seconds
+	 * Monitoring all the landing process and control the engines to achieve nice landing.
+	 * @param dt delta time since last engines control and monitoring, in seconds
 	 */
-	private void updateZOrientation(double dt) {
+	private void engineControl(double dt) {
 		for(int i = 0; i < 8; i++)
 			subEngines[i].setAngularVelocity(dt, subEngines[(i+4)%8]);
+		
 		//== this.axisZAngle += subEngines[90/45].getAngularVelocity()*t;
 		this.axisZAngle -= subEngines[270/45].getAngularVelocity()*dt;
-		if(availableOrientedDirection)
-			setAvailableOrientedDirection(false);
-		double ratio = 1;
-		if(this.altitude > 1_000)
-			ratio = (INITIAL_ALTITUDE-this.altitude)/(INITIAL_ALTITUDE-1_000);
-		double goalAxisZAngle = INITIAL_AXIS_Z_ANGLE - (INITIAL_AXIS_Z_ANGLE-90)*ratio*ratio;
-		if(goalAxisZAngle < this.axisZAngle) {
-				setAvailableOrientedDirection(true);
+		
+		if(this.altitude < 1_000 && this.axisZAngle <= 100 && this.axisZAngle >= 90 && subEngines[270/45].getAngularVelocity() == 0) {
+			double minEnginesAcc =  (630/(NET_WEIGHT+this.fuelWeight))*Math.cos(Math.toRadians(this.axisZAngle-90)) - Moon.getGravityAcc(this.horizontalVelocity); // Lower bound of the engines acceleration ability
+			double timeToStop = (-this.verticalVelocity)/minEnginesAcc; // The time it takes for vertical velocity to zero, given actual vertical velocity
+			double thresholdAltitude = 5 - this.verticalVelocity*timeToStop - 0.5*minEnginesAcc*timeToStop*timeToStop; // Threshold height for full stop in the vertical axis (vertical velocity = 0) at 5m height, given actual vertical velocity & The time it takes for speed to zero
+			// DEBUG: System.out.println("******** PART B: thresholdAltitude: " + thresholdAltitude);
+			if(this.altitude + this.verticalVelocity*dt + 0.5*Moon.getGravityAcc(this.horizontalVelocity)*dt*dt > thresholdAltitude || this.altitude <= 5 || this.verticalVelocity > 0) {
+				System.out.println("Up Threshold Altitude");
+				mainEngine.setOn(false);
+				setFullGas(false);
+			}else if(this.altitude > 5 && this.altitude < thresholdAltitude) {
+				System.out.println("Down Threshold Altitude");
+				mainEngine.setOn(true);
+				setFullGas(true);
+			}
+		} else {
+			double goalVerticalVelocity = (INITIAL_VERTICAL_VELOCITY/(INITIAL_ALTITUDE-5))*(this.altitude-5);
+			// DEBUG: System.out.println(goalVerticalVelocity);
+			double goalHorizontalVelocity = (INITIAL_HORIZONTAL_VELOCITY/(INITIAL_ALTITUDE-1_000))*(this.altitude-1_000);
+			if(this.altitude > 1_000 && goalHorizontalVelocity+EPS < this.horizontalVelocity) { // increase angle or altitude
+				if((int)this.axisZAngle+1 < 180) {
+					// DEBUG: System.out.println("Turn on SE2 - Angle increase (+)");
+					setFullGas(false);
+					subEngines[90/45].setOn(true);
+				} else setFullGas(true);
+			}
+			if(goalVerticalVelocity-EPS > this.verticalVelocity) { //decrease angle or increase altitude  
+				if(Math.round(this.axisZAngle) > 90) {
+					// DEBUG: System.out.println("Turn on SE6 - Angle decrease (-)");
+					setFullGas(false);
+					subEngines[270/45].setOn(true);
+				} else setFullGas(true);
+			}
+			if(goalVerticalVelocity+EPS < this.verticalVelocity && this.verticalVelocity < 0) { //increase angle or decrease altitude
+				if((int)this.axisZAngle+1 < 180) {
+					// DEBUG: System.out.println("Turn on SE2 - Angle increase (+)");
+					setFullGas(false);
+					subEngines[90/45].setOn(true);
+				} else setFullGas(false);
+			}
+			if(goalVerticalVelocity+EPS < this.verticalVelocity && this.verticalVelocity > 0 && this.altitude < 1_000) {
+				// DEBUG: System.out.println("Turn off all engines");
+				setFullGas(false);
+				mainEngine.setOn(false);
+			}
+			if(subEngines[90/45].getAngularVelocity() > 0) {
+				// DEBUG: System.out.println("Turn on SE6 - Angle decrease (-)");
+				setFullGas(false);
 				subEngines[270/45].setOn(true);
-		} else if(goalAxisZAngle > this.axisZAngle) {
-				setAvailableOrientedDirection(true);
+			} else if(subEngines[270/45].getAngularVelocity() > 0 && (this.altitude > 1_000 || subEngines[270/45].getAngularVelocity() > 3 || this.axisZAngle < 90+2*EPS)) {
+				// DEBUG: System.out.println("Turn on SE2 - Angle increase (+)");
+				setFullGas(false);
 				subEngines[90/45].setOn(true);
+			}
 		}
 	}
 	
 	/**
-	 * Allows you to change the availability of changing the orientation of the spacecraft.
-	 * @param available true if you want to enable the availability to change orientation, and false otherwise.
+	 * Turn on/off all sub-engines. To gain full gas, the main engine turn on together with the sub-engines.
+	 * If adjusted direction needed, all sub-engines turned off without the main engine.
+	 * @param fullGas true if full gas needed - all sub-engines and main engine will turn on, and false will turn off all sub-engines, without the main engine
 	 */
-	private void setAvailableOrientedDirection(boolean available) {
-		if(available)
-			for(int i = 0; i < 8; i++)
-				subEngines[i].setOn(false);
-		else
+	private void setFullGas(boolean fullGas) {
+		if(fullGas) {
+			mainEngine.setOn(true);
 			for(int i = 0; i < 8; i++)
 				subEngines[i].setOn(true);
-		availableOrientedDirection = available;
+		}else for(int i = 0; i < 8; i++)
+				subEngines[i].setOn(false);
 	}
 	
 	/**
@@ -157,7 +204,8 @@ public class Spacecraft {
 	 * @param dt time passed from the last fuel update in seconds
 	 */
 	private void updateFuelWeight(double dt) {
-		fuelWeight -= mainEngine.getFuelBurningRate()*dt;
+		if(mainEngine.isOn())
+			fuelWeight -= mainEngine.getFuelBurningRate()*dt;
 		for(int i = 0; i < 8; i++)
 			if(subEngines[i].isOn())
 				fuelWeight -= subEngines[i].getFuelBurningRate()*dt;
@@ -175,24 +223,8 @@ public class Spacecraft {
 		return verticalVelocity;
 	}
 
-	public double getDriveAngle() {
-		return driveAngle;
-	}
-
-	public double getTiltAngle() {
-		return tiltAngle;
-	}
-
 	public double getAltitude() {
 		return altitude;
-	}
-
-	public double getAccX() {
-		return accX;
-	}
-
-	public double getAccY() {
-		return accY;
 	}
 
 	public double getAccZ() {
