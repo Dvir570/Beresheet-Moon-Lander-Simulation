@@ -134,11 +134,11 @@ public class Spacecraft {
 			double thresholdAltitude = 5 - this.verticalVelocity*timeToStop - 0.5*minEnginesAcc*timeToStop*timeToStop; // Threshold height for full stop in the vertical axis (vertical velocity = 0) at 5m height, given actual vertical velocity & The time it takes for speed to zero
 			// DEBUG: System.out.println("******** PART B: thresholdAltitude: " + thresholdAltitude);
 			if(this.altitude + this.verticalVelocity*dt + 0.5*Moon.getGravityAcc(this.horizontalVelocity)*dt*dt > thresholdAltitude || this.altitude <= 5 || this.verticalVelocity > 0) {
-				System.out.println("Up Threshold Altitude");
+				// DEBUG: System.out.println("Up Threshold Altitude");
 				mainEngine.setOn(false);
 				setFullGas(false);
 			}else if(this.altitude > 5 && this.altitude < thresholdAltitude) {
-				System.out.println("Down Threshold Altitude");
+				// DEBUG: System.out.println("Down Threshold Altitude");
 				mainEngine.setOn(true);
 				setFullGas(true);
 			}
