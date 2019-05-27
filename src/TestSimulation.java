@@ -4,7 +4,7 @@ public class TestSimulation {
 
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
-		Spacecraft beresheet = new Spacecraft();
+		Beresheet2 beresheet = new Beresheet2();
 		beresheet.land();
 	}
 

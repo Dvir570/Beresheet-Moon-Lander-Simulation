@@ -2,7 +2,7 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 
-public class Spacecraft {	
+public class Beresheet2 {	
 	private final int NET_WEIGHT = 165; // kg
 	//Relative to the surface of the moon, always at least 90 degrees. 
 	private final double INITIAL_AXIS_Z_ANGLE = 90 + 90; // 90 is vertical (as in landing)
@@ -21,7 +21,7 @@ public class Spacecraft {
 	private SubEngine[] subEngines;
 	private MainEngine mainEngine;
 	
-	public Spacecraft() {
+	public Beresheet2() {
 		this.mainEngine = new MainEngine();
 		this.subEngines = new SubEngine[8];
 		for(int i = 0; i < 8; i++) {
